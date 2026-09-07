@@ -85,7 +85,8 @@ export interface MatriculadoCurso {
   enrolled_at: string;
   progress_percent: number;
   last_accessed_at?: string;
-  status: "activo" | "completado" | "inactivo";
+  suspended_at?: string | null;
+  status: "activo" | "completado" | "inactivo" | "suspendido";
   enrollment_type: "online" | "manual";
   offline_payment_method?: string;
 }

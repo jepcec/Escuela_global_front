@@ -174,6 +174,7 @@ function EnrollmentRow({ enrollment }: { enrollment: Enrollment }) {
   const needsReview = isCompleted && !enrollment.has_review;
   const level = course.level ?? "";
   const isExpired = !!enrollment.access_expires_at && new Date(enrollment.access_expires_at) < new Date();
+  const isSuspended = !!enrollment.suspended_at;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 flex gap-5 hover:shadow-sm transition-shadow">
@@ -206,7 +207,12 @@ function EnrollmentRow({ enrollment }: { enrollment: Enrollment }) {
               Certificado disponible
             </span>
           )}
-          {isExpired && (
+          {isSuspended && (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+              Bloqueado
+            </span>
+          )}
+          {!isSuspended && isExpired && (
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
               Acceso vencido
             </span>

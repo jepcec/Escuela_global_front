@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cursosService } from "@/lib/services/courses";
 import { dashboardService, type MatriculadoCurso } from "@/lib/services/dashboard";
+import { matriculasService } from "@/lib/services/enrollments";
 import { useAuthStore } from "@/store/authStore";
 import { Download, ArrowLeft, Users, TrendingUp, Clock, Trophy, Loader2 } from "lucide-react";
 
@@ -23,12 +24,14 @@ const STATUS_LABELS: Record<string, string> = {
   activo: "Activo",
   completado: "Completado",
   inactivo: "Inactivo",
+  suspendido: "Suspendido",
 };
 
 const STATUS_STYLES: Record<string, string> = {
   activo: "bg-blue-50 text-blue-700",
   completado: "bg-green-50 text-green-700",
   inactivo: "bg-gray-100 text-gray-500",
+  suspendido: "bg-red-50 text-red-700",
 };
 
 function StatCard({
@@ -56,6 +59,7 @@ export default function MatriculadosCursoPage() {
   const courseId = params.id as string;
   const { user: me } = useAuthStore();
   const isCoordinador = me?.role === "coordinador";
+  const queryClient = useQueryClient();
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -86,6 +90,19 @@ export default function MatriculadosCursoPage() {
       toast.success("Excel exportado correctamente");
     },
     onError: () => toast.error("Error al exportar el Excel"),
+  });
+
+  const toggleSuspendMutation = useMutation({
+    mutationFn: ({ id, suspend }: { id: string; suspend: boolean }) =>
+      suspend ? matriculasService.suspendEnrollment(id) : matriculasService.reactivateEnrollment(id),
+    onSuccess: (data) => {
+      toast.success(data.message);
+      queryClient.invalidateQueries({ queryKey: ["admin-matriculados", courseId] });
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? "Error al actualizar la matrícula");
+    },
   });
 
   const stats = data?.stats;
@@ -154,6 +171,7 @@ export default function MatriculadosCursoPage() {
           <option value="activo">Activo</option>
           <option value="completado">Completado</option>
           <option value="inactivo">Inactivo</option>
+          <option value="suspendido">Suspendido</option>
         </select>
         <select
           value={typeFilter}
@@ -253,12 +271,31 @@ export default function MatriculadosCursoPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/panel/estudiantes/${m.user.id}/cursos/${courseId}`}
-                        className="text-[#084D95] hover:underline text-xs"
-                      >
-                        Ver actividad
-                      </Link>
+                      <div className="flex items-center justify-end gap-3">
+                        <Link
+                          href={`/panel/estudiantes/${m.user.id}/cursos/${courseId}`}
+                          className="text-[#084D95] hover:underline text-xs"
+                        >
+                          Ver actividad
+                        </Link>
+                        {m.status === "suspendido" ? (
+                          <button
+                            onClick={() => toggleSuspendMutation.mutate({ id: m.enrollment_id, suspend: false })}
+                            disabled={toggleSuspendMutation.isPending && toggleSuspendMutation.variables?.id === m.enrollment_id}
+                            className="text-emerald-600 hover:underline text-xs disabled:opacity-50"
+                          >
+                            Reactivar
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => toggleSuspendMutation.mutate({ id: m.enrollment_id, suspend: true })}
+                            disabled={toggleSuspendMutation.isPending && toggleSuspendMutation.variables?.id === m.enrollment_id}
+                            className="text-red-600 hover:underline text-xs disabled:opacity-50"
+                          >
+                            Suspender
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

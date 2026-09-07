@@ -132,6 +132,7 @@ export interface Enrollment {
   order_id?: string;
   enrolled_at: string;
   access_expires_at?: string | null;
+  suspended_at?: string | null;
   enrollment_type: EnrollmentType;
   offline_payment_method?: OfflinePaymentMethod;
   offline_amount?: number;

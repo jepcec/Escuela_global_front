@@ -17,6 +17,10 @@ export interface CreateMatriculasDto {
   access_months?: number;
 }
 
+export interface EnrollmentActionResponse {
+  message: string;
+}
+
 export const matriculasService = {
   list: (params?: MatriculasParams) =>
     api.get<PaginatedResponse<Enrollment>>("/enrollments", { params }).then((r) => r.data),
@@ -26,6 +30,12 @@ export const matriculasService = {
 
   deleteEnrollment: (enrollmentId: string) =>
     api.delete(`/enrollments/${enrollmentId}`).then((r) => r.data),
+
+  suspendEnrollment: (enrollmentId: string) =>
+    api.patch<EnrollmentActionResponse>(`/enrollments/${enrollmentId}/suspender`).then((r) => r.data),
+
+  reactivateEnrollment: (enrollmentId: string) =>
+    api.patch<EnrollmentActionResponse>(`/enrollments/${enrollmentId}/reactivar`).then((r) => r.data),
 
   buscarEstudiante: (query: string) =>
     api.get<{ id: string; first_name: string; last_name: string; email: string }[]>(

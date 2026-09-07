@@ -54,10 +54,21 @@ const MATERIAL_ICON: Record<string, string> = {
   PDF: "📄", Excel: "📊", Word: "📝", Otro: "📎",
 };
 
-function isExpiredAccessError(err: unknown) {
+type AccessBlockReason = "vencido" | "suspendido" | null;
+
+function getAccessBlockReason(err: unknown): AccessBlockReason {
   const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-  return typeof msg === "string" && msg.toLowerCase().includes("vencido");
+  if (typeof msg !== "string") return null;
+  const lower = msg.toLowerCase();
+  if (lower.includes("suspendido")) return "suspendido";
+  if (lower.includes("vencido")) return "vencido";
+  return null;
 }
+
+const ACCESS_BLOCK_MESSAGES: Record<Exclude<AccessBlockReason, null>, string> = {
+  vencido: "Tu acceso a este curso ha vencido. Contacta a soporte para renovarlo.",
+  suspendido: "Tu acceso a este curso ha sido suspendido. Contacta a soporte para más información.",
+};
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function CourseViewerPage() {
@@ -141,9 +152,8 @@ export default function CourseViewerPage() {
       }
     },
     onError: (err) => {
-      if (isExpiredAccessError(err)) {
-        toast.error("Tu acceso a este curso ha vencido. Contacta a soporte para renovarlo.");
-      }
+      const reason = getAccessBlockReason(err);
+      if (reason) toast.error(ACCESS_BLOCK_MESSAGES[reason]);
     },
   });
 
@@ -199,13 +209,11 @@ export default function CourseViewerPage() {
   }
 
   if (!content || !progressData) {
-    const expired = isExpiredAccessError(contentError) || isExpiredAccessError(progressError);
+    const reason = getAccessBlockReason(contentError) ?? getAccessBlockReason(progressError);
     return (
       <div className="-mx-4 lg:-mx-8 -my-6 lg:-my-8 flex flex-col items-center justify-center h-[calc(100vh-64px)] gap-4 px-4 text-center">
         <p className="text-gray-500">
-          {expired
-            ? "Tu acceso a este curso ha vencido. Contacta a soporte para renovarlo."
-            : "No tienes acceso a este curso."}
+          {reason ? ACCESS_BLOCK_MESSAGES[reason] : "No tienes acceso a este curso."}
         </p>
         <Link href="/mis-cursos" className="text-[#084D95] underline text-sm">Ver mis cursos</Link>
       </div>
